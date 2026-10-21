@@ -1,56 +1,76 @@
-# TatterTV
+# TatterTV 🥔📺
 
-One-command TV control over ADB — with **verified** playback, not hopeful key presses.
+**Your TV, minus the remote hunt.**
 
-Works with Fire TV, Android TV, and Google TV devices from any machine on the same network. Stdlib-only Python; the only requirement is `adb` (Android platform-tools) on your PATH.
+TatterTV is a friendly little command-line buddy that plays what you *actually* asked for on your TV — and then checks that it really happened. No D-pad gymnastics, no "it says playing, trust me," no wrong show photobombing your movie night.
 
-## Why
+Born on a real Fire TV, during a real documentary night that went sideways in the most educational way possible. It now speaks to the whole Android TV family — and it's learning Roku next.
 
-TV apps lie by omission:
+## The night TatterTV learned its manners
 
-- A media session reporting "playing" doesn't say *what* is playing — a home-screen preview counts.
-- A warm Netflix app silently ignores title deep links, so a follow-up "Play" press starts whatever happened to have focus.
-- TV IPs are DHCP leases; hard-coding one works until it doesn't.
+The plan was simple: put on a brand-new Mike Tyson documentary on Netflix.
 
-TatterTV encodes the countermeasures: discover devices by MAC address, cold-start an app before deep-linking into it, verify volume by the device's own level readout, and say plainly when the device won't confirm something (Netflix reports no title metadata — the tool tells you that instead of pretending).
+What happened instead:
 
-## Setup
+- Netflix was already open, so it politely **ignored the title link** it was sent.
+- A hopeful press of "Play" started… **Squid Game**. (Great show. Not the assignment.)
+- After a cold restart fixed the link, the TV reported "playing" again — this time it was just the **home-screen preview** doing a little dance.
+- The human saved the night by finding the documentary himself. The robot took notes.
 
-1. Enable ADB debugging on the TV (Fire TV: Settings → My Fire TV → Developer Options → ADB Debugging; Android/Google TV: enable Developer Options, then Network debugging).
-2. Accept the debugging prompt on the TV the first time you connect.
-3. Copy the config template and fill in your TVs:
+Those notes became rules, and the rules became this tool:
+
+- **Cold-start first.** A warm app can ignore a deep link, so TatterTV restarts the app before sending it anywhere important.
+- **Playing ≠ your show.** TatterTV reads back what the device itself confirms — real metadata where the device shares it (YouTube does), and an honest "the device won't tell me" where it doesn't (Netflix doesn't).
+- **Find the TV, don't memorize it.** TV IP addresses are DHCP and wander off. TatterTV discovers your TV by its MAC address, every time.
+- **Volume you can prove.** Turn it up, read the level back, report the actual change.
+
+## What it does
+
+```sh
+python3 tattertv.py status                       # who's awake, what's focused, what's playing
+python3 tattertv.py youtube dQw4w9WgXcQ          # play a video — title verified from metadata
+python3 tattertv.py youtube <url> --expect lofi  # ...and warn me if something else shows up
+python3 tattertv.py netflix 80057281             # open a Netflix title page the reliable way
+python3 tattertv.py volume +2                    # louder — confirmed by the TV's own level readout
+python3 tattertv.py wake                         # rise and shine
+python3 tattertv.py sleep                        # and… scene. 🌙
+python3 tattertv.py pause                        # snack break
+python3 tattertv.py resume                       # and we're back
+python3 tattertv.py key 23                       # a single honest Select
+python3 tattertv.py --device "Bedroom TV" status # multi-TV households welcome
+```
+
+## Works with
+
+- **Fire TV** — the original test couch. Battle-tested, documentary-approved.
+- **Android TV / Google TV** — Sony, TCL, Hisense, Chromecast, Shield… same ADB heart, same tricks.
+- **Roku** — driver built on its cheerful little HTTP API (ECP) and protocol-tested against a stand-in Roku. Lend it a real one and it'll finish its checkup.
+- **Apple TV** — on the wish list, right after Roku.
+
+## Set it up (two minutes, tops)
+
+1. Turn on ADB debugging on the TV.
+   - Fire TV: *Settings → My Fire TV → Developer Options → ADB Debugging*
+   - Android/Google TV: enable Developer Options, then *Network debugging*
+2. The first time TatterTV connects, your TV will ask if that's okay. It is. Tap **Allow**.
+3. Copy the example config and make it yours:
 
 ```sh
 cp devices.example.json devices.json
 ```
 
-Find a TV's MAC in its network settings. `devices.json` is git-ignored — real device details never belong in the repo.
+Your TV's MAC address lives in its network settings. `devices.json` is git-ignored on purpose — your real device details stay home, where they belong.
 
-## Commands
+## The honesty bit (our favorite feature)
 
-```sh
-python3 tattertv.py status                      # device, power, focused app, media state + metadata
-python3 tattertv.py wake                        # wake and read back power state
-python3 tattertv.py sleep                       # sleep and read back power state
-python3 tattertv.py youtube dQw4w9WgXcQ         # play a video, verify title from metadata
-python3 tattertv.py youtube <url> --expect "lofi"   # warn if a different title is playing
-python3 tattertv.py netflix 80057281            # open a Netflix title page (cold start)
-python3 tattertv.py volume +2                   # verified by level readback
-python3 tattertv.py pause | resume
-python3 tattertv.py key 23                      # raw keyevent (23 = Select)
-python3 tattertv.py --device "Bedroom TV" status
-```
+Most TV tools tell you what they *sent*. TatterTV tells you what the TV *said back*:
 
-## Platform notes
+- Playback claims come from the device's media session — never from wishful thinking.
+- Volume claims come from before/after level readings.
+- And when a device simply can't confirm something — Netflix publishes no title metadata, full stop — TatterTV says so out loud instead of guessing with confidence.
 
-- **Fire TV** — battle-tested path. YouTube and Netflix launch by pinned component.
-- **Android TV / Google TV** — same ADB core; YouTube launches by package. Netflix uses the same TV app package as Fire TV.
-- **Roku / Apple TV** — different protocols (Roku: HTTP ECP; Apple TV: pyatv). Not yet implemented; the command surface is designed to take them as additional drivers.
+Curious how each rule earned its place? The full story is in [docs/DESIGN.md](docs/DESIGN.md) — a small museum of everything that went wrong first, lovingly labeled.
 
-## Honesty rules built in
+## Pull up a couch cushion
 
-- Playback claims come from `dumpsys media_session` readbacks, never from the fact a command was sent.
-- Volume claims come from the device's reported level before/after.
-- Netflix title verification from the device is impossible today (no metadata is published); `netflix` reports state and tells you the title needs eyes on the screen.
-
-See [docs/DESIGN.md](docs/DESIGN.md) for the failure catalogue that produced these rules.
+Issues, ideas, and "it worked on my TV!" reports are all welcome. If TatterTV saves one movie night from starting the wrong show, it has done its job. 🛋️
