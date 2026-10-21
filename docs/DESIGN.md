@@ -44,11 +44,22 @@ headlessly. Each rule in the code answers a specific incident.
   hosting ADB access goes down, the controller can retry and report, not
   resurrect it.
 
-## Roadmap
+## Roadmap — status
 
-- **Screenshot verification.** Capture the TV screen (`screencap`), pull
-  it back, and check the actual frame before acting at decision points.
-  This closes the Netflix blindness: a title page is readable in pixels
-  even when it is invisible to the accessibility tree.
-- **Roku driver** (HTTP ECP: keypress + app launch + search endpoints).
-- **Apple TV driver** (pyatv).
+- **Screenshot verification — BUILT (local bridge tool).** The frame
+  moves screencap → pull → base64 in 20,000-char chunks → reassembly,
+  verified end-to-end by SHA-256 hash match and visual inspection of a
+  test frame that made the full round trip. One hard platform limit,
+  measured not guessed: during DRM playback (Netflix video in front),
+  `screencap` returns 0 bytes — the secure surface refuses capture.
+  Menus and non-DRM screens are where the eyes work, which is exactly
+  where blind navigation used to hurt. (Getting this working required
+  fixing a chunk-corruption bug: the transport's stderr marker butts
+  directly against output that has no trailing newline, silently adding
+  12 characters to every chunk. Now documented in the code.)
+- **Roku driver — BUILT.** ECP per Roku's official docs: keypress,
+  launch with contentId/MediaType deep links, and verification via
+  `/query/active-app` + `/query/media-player`. Tested against a stub
+  server implementing the protocol (all requests asserted); not yet
+  run against physical Roku hardware.
+- **Apple TV driver** (pyatv) — still to do.
